@@ -829,6 +829,7 @@ dependencies = [
     { name = "scipy" },
     { name = "seaborn" },
     { name = "tensorflow" },
+    { name = "tensorflow-text" },
     { name = "torch" },
 ]
 
@@ -841,6 +842,7 @@ requires-dist = [
     { name = "scipy", specifier = ">=1.17.1" },
     { name = "seaborn", specifier = ">=0.13.2" },
     { name = "tensorflow", specifier = ">=2.20.0" },
+    { name = "tensorflow-text", specifier = ">=2.20.0" },
     { name = "torch", specifier = ">=2.10.0" },
 ]
 
@@ -1618,6 +1620,22 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/ea/4c/c1aa90c5cc92e9f7f9c78421e121ef25bae7d378f8d1d4cbad46c6308836/tensorflow-2.20.0-cp313-cp313-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:47c88e05a07f1ead4977b4894b3ecd4d8075c40191065afc4fd9355c9db3d926", size = 259663776, upload-time = "2025-08-13T16:53:24.507Z" },
     { url = "https://files.pythonhosted.org/packages/43/fb/8be8547c128613d82a2b006004026d86ed0bd672e913029a98153af4ffab/tensorflow-2.20.0-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:5fa3729b0126f75a99882b89fb7d536515721eda8014a63e259e780ba0a37372", size = 620815537, upload-time = "2025-08-13T16:53:42.577Z" },
     { url = "https://files.pythonhosted.org/packages/9b/9e/02e201033f8d6bd5f79240b7262337de44c51a6cfd85c23a86c103c7684d/tensorflow-2.20.0-cp313-cp313-win_amd64.whl", hash = "sha256:c25edad45e8cb9e76366f7a8c835279f9169028d610f3b52ce92d332a1b05438", size = 332012220, upload-time = "2025-08-13T16:53:57.303Z" },
+]
+
+[[package]]
+name = "tensorflow-text"
+version = "2.20.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "tensorflow" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/20/3b/d9ed34802d4a5911023bb3e784abb828e974c736887a500de71e7fe09f11/tensorflow_text-2.20.0-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:16475d94288b6221cb16136d2a3f10104aa77c63346098f2e63286f3a19ce208", size = 57011236, upload-time = "2026-01-27T19:34:03.648Z" },
+    { url = "https://files.pythonhosted.org/packages/5f/4b/51922b2d272fc4623c7fcf4f3dac3a191e799eaa581fee1b8fc09ab586da/tensorflow_text-2.20.0-cp311-cp311-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:41af5df743c07ca18ee5d66e86eae8dd929cd01a9a93acd0eb42d008d524101e", size = 62622067, upload-time = "2026-01-27T19:34:13.572Z" },
+    { url = "https://files.pythonhosted.org/packages/7d/15/61c813ca3a6de9369e97f496a81b879da1e2aa3710732662a1a2d4a2d69f/tensorflow_text-2.20.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:89ce9e6821411e46b9f7323b17216b5c088e67fdf12236128cc27107241adcfd", size = 62454360, upload-time = "2026-01-27T19:47:59.146Z" },
+    { url = "https://files.pythonhosted.org/packages/98/e4/e3c72d0a73caeba90cf5b31e69d44e9a08d614e0e829484d813f3b63e037/tensorflow_text-2.20.0-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:811f7135497a7173da375797749af1e7c00f7b1ba421e5db383e05a7bfc7468b", size = 57002912, upload-time = "2026-01-27T19:34:17.761Z" },
+    { url = "https://files.pythonhosted.org/packages/f5/ca/796cfd97ae6693d3c84c37575a6d481be5f1ef36c920d1a73c884f31797b/tensorflow_text-2.20.0-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:1d6159fd61ba18c3fed45811595a4a349a8f20c857a01a95879980fdbae1cf8a", size = 62620555, upload-time = "2026-01-27T19:34:21.242Z" },
+    { url = "https://files.pythonhosted.org/packages/c3/e6/cfd784298ffb759a4235721cac2ac20f7ff758bf687069cfbaebb06c5804/tensorflow_text-2.20.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:bb6e4f34101c8ded9645dba4c4a693a791dff9f7bc64ae3e9f040b7b3afe7c1a", size = 62455309, upload-time = "2026-01-27T19:48:28.631Z" },
 ]
 
 [[package]]
