@@ -11,3 +11,12 @@ To do:
   - Max length: e.g., 64 vs 128 vs 256 tokens
   - Regularization: dropout 0 vs 0.3 (or another controlled value)
   - Capacity: hidden size small vs medium (keep all else fixed)
+
+
+
+To do list part 2:
+1. tokenizer
+2. CNN architecture (+ LSTM)
+3. decide on ablation (max len easiest)
+4. early stopping
+5. error analysis (eventually)
