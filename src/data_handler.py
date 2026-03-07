@@ -248,9 +248,9 @@ def preprocess_data(
             - original_validation: Validation set.
             - original_test: Test set.
     """
-    original_train = training_data["Title"] + training_data["Description"]
-    original_validation = validation_data["Title"] + validation_data["Description"]
-    original_test = test_data["Title"] + test_data["Description"]
+    original_train = (training_data["Title"] + training_data["Description"]).values.tolist()
+    original_validation = (validation_data["Title"] + validation_data["Description"]).values.tolist()
+    original_test = (test_data["Title"] + test_data["Description"]).values.tolist()
 
     # tokenisation
     vocab = build_vocab(original_train, min_freq=2, max_size=30000)
@@ -259,10 +259,9 @@ def preprocess_data(
     # plot_lengths(original_train)
 
     print(f"Using MAX_LEN={MAX_LEN} and BATCH_SIZE={BATCH_SIZE}")
-
-    train_ds = TextDataset(original_train, y_train, vocab, max_len=MAX_LEN)
-    val_ds = TextDataset(original_validation, y_validation, vocab, max_len=MAX_LEN)
-    test_ds = TextDataset(original_test, y_test, vocab, max_len=MAX_LEN)
+    train_ds = TextDataset(original_train, y_train.values.tolist(), vocab, max_len=MAX_LEN)
+    val_ds = TextDataset(original_validation, y_validation.values.tolist(), vocab, max_len=MAX_LEN)
+    test_ds = TextDataset(original_test, y_test.values.tolist(), vocab, max_len=MAX_LEN)
 
     train_loader = DataLoader(
         train_ds, batch_size=BATCH_SIZE, shuffle=True, collate_fn=collate
