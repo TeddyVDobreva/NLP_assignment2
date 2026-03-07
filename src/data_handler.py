@@ -12,7 +12,7 @@ from torch.utils.data import DataLoader, Dataset
 
 PAD = "<pad>"
 UNK = "<unk>"
-MAX_LEN = 200
+MAX_LEN = 64
 BATCH_SIZE = 64
 TRAIN_SIZE = 5000
 TEST_SIZE = 500
@@ -253,8 +253,8 @@ def preprocess_data(
     # tokenisation
     vocab = build_vocab(original_train, min_freq=2, max_size=30000)
     
-    # Plot distribution of lengths in the training set
-    plot_lengths(original_train)
+    # # Plot distribution of lengths in the training set
+    # plot_lengths(original_train)
 
     print(f"Using MAX_LEN={MAX_LEN} and BATCH_SIZE={BATCH_SIZE}")
 
