@@ -1,10 +1,10 @@
 from collections import Counter
 from dataclasses import dataclass
 from typing import Any
+from pathlib import Path
 
-import matplotlib as plt
+import matplotlib.pyplot as plt
 import pandas as pd
-import tensorflow as tf
 import tensorflow_text as tf_text
 import torch
 from sklearn.model_selection import train_test_split
@@ -14,7 +14,8 @@ PAD = "<pad>"
 UNK = "<unk>"
 MAX_LEN = 200
 BATCH_SIZE = 64
-
+TRAIN_SIZE = 5000
+TEST_SIZE = 500
 
 def get_data(
     path: str,
@@ -59,7 +60,7 @@ def get_data(
         original_train,
         original_validation,
         original_test,
-    ) = preprocess_data(training_data, validation_data, test_data)
+    ) = preprocess_data(training_data, validation_data, test_data, y_train,y_validation,y_test)
 
     return (
         X_train,
@@ -102,8 +103,8 @@ def read_data(
             - y_validation: Validation labels.
             - y_test: Test labels.
     """
-    train_data = pd.read_csv(path + "/train.csv")
-    test_data = pd.read_csv(path + "/test.csv")
+    train_data = pd.read_csv(path + "/train.csv")[:TRAIN_SIZE]
+    test_data = pd.read_csv(path + "/test.csv")[:TEST_SIZE]
 
     labels_train = train_data["Class Index"]
     y_test = test_data["Class Index"]
@@ -125,7 +126,7 @@ def read_data(
 def tokenize_data(data):
     tokenizer = tf_text.UnicodeScriptTokenizer()
     tokens = tokenizer.tokenize([data])
-    return tokens
+    return tokens.to_list()[0]
 
 
 def build_vocab(texts, min_freq: int = 2, max_size: int = 30000) -> dict:
@@ -164,19 +165,20 @@ class Batch:
 
 
 class TextDataset(Dataset):
-    def __init__(self, hf_ds: dict, vocab: dict, max_len: int = 200) -> None:
-        self.ds = hf_ds
+    def __init__(self, data, labels, vocab: dict, max_len: int = 200) -> None:
+        self.data = data
+        self.labels = labels
         self.vocab = vocab
         self.max_len = max_len
 
     def __len__(self):
         """Return the number of samples in the dataset."""
-        return len(self.ds)
+        return len(self.labels)
 
     def __getitem__(self, idx: int) -> tuple:
         """Given an index, return the token ids and label for the corresponding sample."""
-        item = self.ds[idx]
-        tokens = tokenize_data(item["text"])
+        item = self.data[idx]
+        tokens = tokenize_data(item)
 
         # Convert to ids and truncate
         if len(tokens) == 0:
@@ -185,25 +187,35 @@ class TextDataset(Dataset):
             ids = numericalize(tokens, self.vocab)[: self.max_len]
             if len(ids) == 0:
                 ids = [self.vocab[UNK]]
-
-        label = int(item["label"])  # 0 negative, 1 positive
-        return ids, label
+        return ids, int(self.labels[idx])
 
 
-def collate(vocabulary, batch: list) -> Batch:
+def collate(batch: list) -> Batch:
     """Collate function to convert a list of samples into a batch."""
     # batch: list of (ids_list, label)
     lengths = torch.tensor([len(x) for x, _ in batch], dtype=torch.long)
     max_len = int(lengths.max().item()) if len(batch) > 0 else 0
-    x = torch.full((len(batch), max_len), vocabulary[PAD], dtype=torch.long)
+    x = torch.full((len(batch), max_len), 0, dtype=torch.long)
     y = torch.tensor([y for _, y in batch], dtype=torch.long)
     for i, (ids, _) in enumerate(batch):
         x[i, : len(ids)] = torch.tensor(ids, dtype=torch.long)
     return Batch(x=x, lengths=lengths, y=y)
 
 
+def plot_lengths(data):
+    Path("plots").mkdir(exist_ok=True)
+    
+    lengths = [len(tokenize_data(text)) for text in data]
+    plt.hist(lengths, bins=50)
+    plt.title("Distribution of tokenized text lengths in training set")
+    plt.xlabel("Length of tokenized text")
+    plt.ylabel("Frequency")
+    plt.savefig("plots/lengths_distribution")
+    plt.close()
+
+
 def preprocess_data(
-    training_data: pd.DataFrame, validation_data: pd.DataFrame, test_data: pd.DataFrame
+    training_data: pd.DataFrame, validation_data: pd.DataFrame, test_data: pd.DataFrame,  y_train,y_validation,y_test
 ) -> tuple[
     Any,  # X_train
     Any,  # X_validation
@@ -239,31 +251,25 @@ def preprocess_data(
     original_test = test_data["Title"] + test_data["Description"]
 
     # tokenisation
-    vocab = build_vocab(original_train["text"], min_freq=2, max_size=30000)
-
-    # throw out long parts of texts depending on max sequence length and also pad
+    vocab = build_vocab(original_train, min_freq=2, max_size=30000)
+    
     # Plot distribution of lengths in the training set
-    lengths = [len(tokenize_data(text)) for text in original_train["text"]]
-    plt.hist(lengths, bins=50)
-    plt.title("Distribution of tokenized text lengths in training set")
-    plt.xlabel("Length of tokenized text")
-    plt.ylabel("Frequency")
-    plt.show()
+    plot_lengths(original_train)
 
     print(f"Using MAX_LEN={MAX_LEN} and BATCH_SIZE={BATCH_SIZE}")
 
-    train_ds = TextDataset(original_train, vocab, max_len=MAX_LEN)
-    val_ds = TextDataset(original_validation, vocab, max_len=MAX_LEN)
-    test_ds = TextDataset(original_test, vocab, max_len=MAX_LEN)
+    train_ds = TextDataset(original_train, y_train, vocab, max_len=MAX_LEN)
+    val_ds = TextDataset(original_validation, y_validation, vocab, max_len=MAX_LEN)
+    test_ds = TextDataset(original_test, y_test, vocab, max_len=MAX_LEN)
 
     train_loader = DataLoader(
-        train_ds, batch_size=BATCH_SIZE, shuffle=True, collate_fn=collate(vocab)
+        train_ds, batch_size=BATCH_SIZE, shuffle=True, collate_fn=collate
     )
     val_loader = DataLoader(
-        val_ds, batch_size=BATCH_SIZE, shuffle=False, collate_fn=collate(vocab)
+        val_ds, batch_size=BATCH_SIZE, shuffle=False, collate_fn=collate
     )
     test_loader = DataLoader(
-        test_ds, batch_size=BATCH_SIZE, shuffle=False, collate_fn=collate(vocab)
+        test_ds, batch_size=BATCH_SIZE, shuffle=False, collate_fn=collate
     )
 
     return (
