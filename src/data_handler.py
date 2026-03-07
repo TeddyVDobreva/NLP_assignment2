@@ -60,6 +60,7 @@ def get_data(
         original_train,
         original_validation,
         original_test,
+        vocab,
     ) = preprocess_data(training_data, validation_data, test_data, y_train,y_validation,y_test)
 
     return (
@@ -72,6 +73,7 @@ def get_data(
         original_train,
         original_validation,
         original_test,
+        vocab,
     )
 
 
@@ -279,4 +281,5 @@ def preprocess_data(
         original_train,
         original_validation,
         original_test,
+        vocab,
     )
