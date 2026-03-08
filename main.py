@@ -2,6 +2,7 @@ import random
 from src.data_handler import get_raw_data, get_smaller_datasets,preprocess_data
 import numpy as np
 import torch
+from src.models import CNN, LSTM
 
 
 def set_seed(seed: int = 67) -> None:
@@ -50,3 +51,9 @@ print(
     tuple(batch0.y.shape),
 )
 print("Example lengths:", batch0.lengths[:10].tolist())
+
+cnn = CNN(vocab_size, 64)
+cnn.fit(train_loader, val_loader)
+
+lstm = LSTM(vocab_size, 64)
+lstm.fit(train_loader, val_loader)
