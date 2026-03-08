@@ -9,120 +9,65 @@ import tensorflow_text as tf_text
 import torch
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, Dataset
+from datasets import Dataset as ds
 
 PAD = "<pad>"
 UNK = "<unk>"
 MAX_LEN = 64
-BATCH_SIZE = 64
-TRAIN_SIZE = 5000
-TEST_SIZE = 500
+BATCH_SIZE = 16
 
-def get_data(
-    path: str,
-) -> tuple[
-    Any,  # X_train
-    Any,  # X_validation
-    Any,  # X_test
-    Any,  # y_train
-    Any,  # y_validation
-    Any,  # y_test
-    Any,  # original_train
-    Any,  # original_validation
-    Any,  # original_test
-]:
-    """
-    Load the raw data from the path and split it into training, validation, and test data.
-    Returns the processed features and labels, and the original data.
+# Subsample for speed
+N_TRAIN = 500
+N_VAL = 100
+N_TEST = 100
 
-    Arguments:
-        path: str- The path to the dataset.
 
-    Returns:
-        Tuple[Any, Any, Any, Any, Any, Any, Any, Any, Any]
-            A tuple which contains:
-            - X_train: Processed training data.
-            - X_validation: Processed validation data.
-            - X_test: Processed test data.
-            - y_train: Training labels.
-            - y_validation: Validation labels.
-            - y_test: Test labels.
-            - original_train: Original training data.
-            - original_validation: Original validation data.
-            - original_test: Original test data.
-    """
-    training_data, validation_data, test_data, y_train, y_validation, y_test = (
-        read_data(path)
-    )
-    (
-        X_train,
-        X_validation,
-        X_test,
-        original_train,
-        original_validation,
-        original_test,
-        vocab,
-    ) = preprocess_data(training_data, validation_data, test_data, y_train,y_validation,y_test)
+def get_raw_data(path):
+    train_data = pd.read_csv(path + "/train.csv")
+    test_data = pd.read_csv(path + "/test.csv")
 
-    return (
-        X_train,
-        X_validation,
-        X_test,
-        y_train,
-        y_validation,
-        y_test,
-        original_train,
-        original_validation,
-        original_test,
-        vocab,
+    train_data, validation_data = train_test_split(
+        train_data, test_size=0.1, random_state=67
     )
 
-
-def read_data(
-    path: str,
-) -> tuple[
-    pd.DataFrame,  # training data
-    pd.DataFrame,  # validation data
-    pd.DataFrame,  # test data
-    pd.Series,  # y_train
-    pd.Series,  # y_validation
-    pd.Series,  # y_test
-]:
-    """
-    Function reads the data from train.csv and test.csv, and extracts the
-    column Class Index as labels; Splits the training data into training
-    and validation, then prints the lengths of all data splits.
-
-    Arguments:
-        path: str- The path to the dataset.
-
-    Returns:
-        Tuple[DataFrame, DataFrame, DataFrame, Series, Series, Series]
-            A tuple which contains:
-            - training_data: Training data.
-            - validation_data: Validation data.
-            - test_data: Test data.
-            - y_train: Training labels.
-            - y_validation: Validation labels.
-            - y_test: Test labels.
-    """
-    train_data = pd.read_csv(path + "/train.csv")[:TRAIN_SIZE]
-    test_data = pd.read_csv(path + "/test.csv")[:TEST_SIZE]
-
-    labels_train = train_data["Class Index"]
-    y_test = test_data["Class Index"]
-
-    training_data, validation_data, y_train, y_validation = train_test_split(
-        train_data, labels_train, test_size=0.1, random_state=67
+    X_train = pd.DataFrame(
+        {
+            "text": train_data["Title"] + train_data["Description"],
+            "label": train_data["Class Index"],
+        }
+    )
+    X_validation = pd.DataFrame(
+        {
+            "text": validation_data["Title"] + validation_data["Description"],
+            "label": validation_data["Class Index"],
+        }
+    )
+    X_test = pd.DataFrame(
+        {
+            "text": test_data["Title"] + test_data["Description"],
+            "label": test_data["Class Index"]
+        }
     )
 
-    print(f"length of train: {len(training_data)}")
-    print(f"length of labels train: {len(y_train)}")
-    print(f"length of validation: {len(validation_data)}")
-    print(f"length of labels validation: {len(y_validation)}")
-    print(f"length of test: {len(test_data)}")
-    print(f"length of test labels: {len(y_test)}")
+    return {
+        "train": ds.from_pandas(X_train, preserve_index=False),
+        "validation": ds.from_pandas(X_validation, preserve_index=False),
+        "test": ds.from_pandas(X_test, preserve_index=False),
+    }
 
-    return training_data, validation_data, test_data, y_train, y_validation, y_test
+
+def get_smaller_datasets(raw):
+    train = raw["train"].shuffle(seed=67).select(range(N_TRAIN))
+    validation = raw["validation"].shuffle(seed=67).select(range(N_VAL))
+    test = raw["test"].select(range(N_TEST))
+    return train, validation, test
+
+
+def get_datasets(raw):
+    train = raw["train"].shuffle(seed=67)  # We only shuffle the training set
+    validation = raw["validation"]
+    test = raw["test"]
+    return train, validation, test
 
 
 def tokenize_data(data):
@@ -158,7 +103,6 @@ def numericalize(tokens: list, vocab: dict) -> list:
     """
     return [vocab.get(tok, vocab[UNK]) for tok in tokens]
 
-
 @dataclass
 class Batch:
     x: torch.Tensor  # (B, T) token ids
@@ -167,20 +111,19 @@ class Batch:
 
 
 class TextDataset(Dataset):
-    def __init__(self, data, labels, vocab: dict, max_len: int = 200) -> None:
-        self.data = data
-        self.labels = labels
+    def __init__(self, hf_ds: dict, vocab: dict, max_len: int = 200) -> None:
+        self.ds = hf_ds
         self.vocab = vocab
         self.max_len = max_len
 
     def __len__(self):
         """Return the number of samples in the dataset."""
-        return len(self.labels)
+        return len(self.ds)
 
     def __getitem__(self, idx: int) -> tuple:
         """Given an index, return the token ids and label for the corresponding sample."""
-        item = self.data[idx]
-        tokens = tokenize_data(item)
+        item = self.ds[idx]
+        tokens = tokenize_data(item["text"])
 
         # Convert to ids and truncate
         if len(tokens) == 0:
@@ -189,7 +132,9 @@ class TextDataset(Dataset):
             ids = numericalize(tokens, self.vocab)[: self.max_len]
             if len(ids) == 0:
                 ids = [self.vocab[UNK]]
-        return ids, int(self.labels[idx])
+
+        label = int(item["label"])  # 0 negative, 1 positive
+        return ids, label
 
 
 def collate(batch: list) -> Batch:
@@ -206,8 +151,8 @@ def collate(batch: list) -> Batch:
 
 def plot_lengths(data):
     Path("plots").mkdir(exist_ok=True)
-    
-    lengths = [len(tokenize_data(text)) for text in data]
+
+    lengths = [len(tokenize_data(text)) for text in data["text"]]
     plt.hist(lengths, bins=50)
     plt.title("Distribution of tokenized text lengths in training set")
     plt.xlabel("Length of tokenized text")
@@ -217,14 +162,13 @@ def plot_lengths(data):
 
 
 def preprocess_data(
-    training_data: pd.DataFrame, validation_data: pd.DataFrame, test_data: pd.DataFrame,  y_train,y_validation,y_test
+    train_ds_hf: pd.DataFrame,
+    val_ds_hf: pd.DataFrame,
+    test_ds_hf: pd.DataFrame,
 ) -> tuple[
     Any,  # X_train
     Any,  # X_validation
     Any,  # X_test
-    pd.Series,  # original_train
-    pd.Series,  # original_validation
-    pd.Series,  # original_test
 ]:
     """
     Function combines the Title an Description columns into one variable, and
@@ -248,20 +192,14 @@ def preprocess_data(
             - original_validation: Validation set.
             - original_test: Test set.
     """
-    original_train = (training_data["Title"] + training_data["Description"]).values.tolist()
-    original_validation = (validation_data["Title"] + validation_data["Description"]).values.tolist()
-    original_test = (test_data["Title"] + test_data["Description"]).values.tolist()
 
-    # tokenisation
-    vocab = build_vocab(original_train, min_freq=2, max_size=30000)
-    
-    # # Plot distribution of lengths in the training set
-    # plot_lengths(original_train)
+    vocab = build_vocab(train_ds_hf["text"], min_freq=2, max_size=30000)
 
     print(f"Using MAX_LEN={MAX_LEN} and BATCH_SIZE={BATCH_SIZE}")
-    train_ds = TextDataset(original_train, y_train.values.tolist(), vocab, max_len=MAX_LEN)
-    val_ds = TextDataset(original_validation, y_validation.values.tolist(), vocab, max_len=MAX_LEN)
-    test_ds = TextDataset(original_test, y_test.values.tolist(), vocab, max_len=MAX_LEN)
+
+    train_ds = TextDataset(train_ds_hf, vocab, max_len=MAX_LEN)
+    val_ds = TextDataset(val_ds_hf, vocab, max_len=MAX_LEN)
+    test_ds = TextDataset(test_ds_hf, vocab, max_len=MAX_LEN)
 
     train_loader = DataLoader(
         train_ds, batch_size=BATCH_SIZE, shuffle=True, collate_fn=collate
@@ -272,13 +210,9 @@ def preprocess_data(
     test_loader = DataLoader(
         test_ds, batch_size=BATCH_SIZE, shuffle=False, collate_fn=collate
     )
-
     return (
         train_loader,
         val_loader,
         test_loader,
-        original_train,
-        original_validation,
-        original_test,
         vocab,
     )
