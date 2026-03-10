@@ -14,12 +14,12 @@ from datasets import Dataset as ds
 PAD = "<pad>"
 UNK = "<unk>"
 MAX_LEN = 64
-BATCH_SIZE = 16
+BATCH_SIZE = 32
 
 # Subsample for speed
-N_TRAIN = 500
-N_VAL = 100
-N_TEST = 100
+N_TRAIN = 512
+N_VAL = 128
+N_TEST = 128
 
 
 def get_raw_data(path):
@@ -133,7 +133,7 @@ class TextDataset(Dataset):
             if len(ids) == 0:
                 ids = [self.vocab[UNK]]
 
-        label = int(item["label"])  # 0 negative, 1 positive
+        label = int(item["label"]) -1  # 0 negative, 1 positive
         return ids, label
 
 
@@ -196,6 +196,9 @@ def preprocess_data(
     vocab = build_vocab(train_ds_hf["text"], min_freq=2, max_size=30000)
 
     print(f"Using MAX_LEN={MAX_LEN} and BATCH_SIZE={BATCH_SIZE}")
+    
+    sample = train_ds_hf[0]["text"]
+    print(tokenize_data(sample)[:20], numericalize(tokenize_data(sample)[:20], vocab)[:20])
 
     train_ds = TextDataset(train_ds_hf, vocab, max_len=MAX_LEN)
     val_ds = TextDataset(val_ds_hf, vocab, max_len=MAX_LEN)
