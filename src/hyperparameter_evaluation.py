@@ -5,19 +5,19 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score
-from sklearn.svm import LinearSVC
+
+from functions_models import evaluation_loop, training_loop
+from models import CNNTextClassifier, LSTMClassifier
 
 
 def do_hyperparameter_evaluation(
-    model: LinearSVC | LogisticRegression,
+    model: CNNTextClassifier | LSTMClassifier,
     hyperparameter1: dict[str, list],
     hyperparameter2: dict[str, list],
-    X_train: Any,
-    labels_train: pd.Series,
-    X_validation: Any,
-    labels_validation: pd.Series,
+    train_loader: Any,
+    validation_loader: Any,
+    clip_grad_norm: float | None,
     **kwargs: Any,
 ) -> None:
     """
@@ -59,11 +59,21 @@ def do_hyperparameter_evaluation(
 
                 model_to_tune = model(random_state=67, **hyperparameter_dic, **kwargs)
 
-                model_to_tune.fit(X_train, labels_train)
+                training_loop(
+                    model=model_to_tune,
+                    train_loader=train_loader,
+                    val_loader=validation_loader,
+                    lr=hp1,
+                    clip_grad_norm=clip_grad_norm,
+                    patience=hp2,
+                )
 
-                validation_predictions = model_to_tune.predict(X_validation)
+                dictionary_validation = evaluation_loop(
+                    model=model_to_tune, loader=validation_loader
+                )
+
                 validation_accuracy = accuracy_score(
-                    labels_validation, validation_predictions
+                    dictionary_validation["y_true"], dictionary_validation["y_pred"]
                 )
 
                 accuracy_matrix[i, j] = validation_accuracy
