@@ -3,11 +3,9 @@ from typing import Any
 
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
 import seaborn as sns
 from sklearn.metrics import accuracy_score
 
-from src.functions_models import evaluation_loop, training_loop
 from src.models import CNNTextClassifier, LSTMClassifier
 
 
@@ -62,17 +60,13 @@ def do_hyperparameter_evaluation(
                     vocab_size=vocab_size, **hyperparameter_dic, **kwargs
                 )
 
-                training_loop(
-                    model=model_to_tune,
+                model_to_tune.fit(
                     train_loader=train_loader,
                     val_loader=validation_loader,
                     lr=hp1,
-                    patience=3,
                 )
 
-                dictionary_validation = evaluation_loop(
-                    model=model_to_tune, loader=validation_loader
-                )
+                dictionary_validation = model_to_tune.evaluate(train_loader)
 
                 validation_accuracy = accuracy_score(
                     dictionary_validation["y_true"], dictionary_validation["y_pred"]

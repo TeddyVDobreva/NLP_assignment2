@@ -1,10 +1,5 @@
-from src.functions_models import training_loop, evaluation_loop
 import time
 from pandas import DataFrame
-
-MAX_EPOCHS = 12
-PATIENCE = 3
-LR = 1e-3
 
 def ablation(model, ablatioin_argument, train_loader, val_loader, **kwargs):
 
@@ -14,16 +9,12 @@ def ablation(model, ablatioin_argument, train_loader, val_loader, **kwargs):
         hyperparameter_dic = {hyperparameter_name: hp1}
         m = model(**hyperparameter_dic,**kwargs)
         t0 = time.perf_counter()
-        hist = training_loop(
-        m,
+        hist = m.fit(
         train_loader,
         val_loader,
-        lr=LR,
-        max_epochs=MAX_EPOCHS,
-        patience=PATIENCE,
         )
         total_time = time.perf_counter() - t0
-        val = evaluation_loop(m, val_loader)
+        val = m.evaluate(val_loader)
         results[i] = {
         "name": model.__class__,
         "hist": hist,
@@ -39,8 +30,6 @@ def ablation(model, ablatioin_argument, train_loader, val_loader, **kwargs):
                 res["name"],
                 res["val"]["acc"],
                 res["val"]["f1"],
-                res["test"]["acc"],
-                res["test"]["f1"],
                 res["time_s_total"],
             ]
         )
@@ -52,8 +41,6 @@ def ablation(model, ablatioin_argument, train_loader, val_loader, **kwargs):
                 "model",
                 "val_acc",
                 "val_macro_f1",
-                "test_acc",
-                "test_macro_f1",
                 "train_time_s",
             ],
         )

@@ -45,7 +45,7 @@ def _get_raw_data(path):
     X_test = pd.DataFrame(
         {
             "text": test_data["Title"] + test_data["Description"],
-            "label": test_data["Class Index"]
+            "label": test_data["Class Index"],
         }
     )
 
@@ -103,6 +103,7 @@ def _numericalize(tokens: list, vocab: dict) -> list:
     """
     return [vocab.get(tok, vocab[UNK]) for tok in tokens]
 
+
 @dataclass
 class Batch:
     x: torch.Tensor  # (B, T) token ids
@@ -133,7 +134,7 @@ class TextDataset(Dataset):
             if len(ids) == 0:
                 ids = [self.vocab[UNK]]
 
-        label = int(item["label"]) -1  # 0 negative, 1 positive
+        label = int(item["label"]) - 1
         return ids, label
 
 
@@ -161,7 +162,8 @@ def _plot_lengths(data):
     plt.close()
 
 
-def get_preprocessed_data(path, small_datasets = False, plots = False
+def get_preprocessed_data(
+    path, small_datasets=False, plots=False
 ) -> tuple[
     Any,  # X_train
     Any,  # X_validation
@@ -190,7 +192,7 @@ def get_preprocessed_data(path, small_datasets = False, plots = False
             - original_test: Test set.
     """
     raw = _get_raw_data(path)
-    
+
     if small_datasets:
         train_ds_hf, val_ds_hf, test_ds_hf = _get_smaller_datasets(raw)
     else:
@@ -201,12 +203,12 @@ def get_preprocessed_data(path, small_datasets = False, plots = False
     )
 
     vocab = _build_vocab(train_ds_hf["text"], min_freq=2, max_size=30000)
-    
+
     if plots:
         _plot_lengths(train_ds_hf)
 
     print(f"Using MAX_LEN={MAX_LEN} and BATCH_SIZE={BATCH_SIZE}")
-    
+
     train_ds = TextDataset(train_ds_hf, vocab, max_len=MAX_LEN)
     val_ds = TextDataset(val_ds_hf, vocab, max_len=MAX_LEN)
     test_ds = TextDataset(test_ds_hf, vocab, max_len=MAX_LEN)

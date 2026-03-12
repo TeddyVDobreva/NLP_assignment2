@@ -7,33 +7,18 @@ import torch.nn as nn
 from pandas import DataFrame
 
 from src.data_handler import get_preprocessed_data
-from src.functions_models import evaluation_loop, training_loop
-from src.hyperparameter_evaluation import do_hyperparameter_evaluation, make_heatmap
+from src.hyperparameter_evaluation import do_hyperparameter_evaluation
 from src.models import CNNTextClassifier, LSTMClassifier
-
-MAX_EPOCHS = 12
-PATIENCE = 3
-LR = 1e-3
-CLIP = 1
-
-
-def count_parameters(model: nn.Module) -> int:
-    return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 
 def train_and_time(name: str, model: nn.Module):
     t0 = time.perf_counter()
-    hist = training_loop(
-        model,
+    hist = model.fit(
         train_loader,
         val_loader,
-        lr=LR,
-        max_epochs=MAX_EPOCHS,
-        patience=PATIENCE,
     )
     total_time = time.perf_counter() - t0
-    val = evaluation_loop(model, val_loader)
-    # test = evaluation_loop(model, test_loader)
+    val = model.evaluate(val_loader)
     return {
         "name": name,
         "hist": hist,
@@ -56,7 +41,7 @@ def set_seed(seed: int = 67) -> None:
 train_loader, val_loader, test_loader, vocab = get_preprocessed_data("data", True)
 vocab_size = len(vocab)
 
-set_seed(67)
+set_seed()
 
 lstm = LSTMClassifier(
     vocab_size=vocab_size,
@@ -75,10 +60,6 @@ cnn = CNNTextClassifier(
     dropout=0.3,
     pad_idx=0,
 )
-
-print("Number of trainable parameters:")
-print("LSTM:", count_parameters(lstm))
-print("CNN: ", count_parameters(cnn))
 
 # Hyperparameter tuning
 do_hyperparameter_evaluation(
