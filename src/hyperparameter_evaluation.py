@@ -15,6 +15,7 @@ def do_hyperparameter_evaluation(
     model: CNNTextClassifier | LSTMClassifier,
     hyperparameter1: dict[str, list],
     hyperparameter2: dict[str, list],
+    vocab_size: int,
     train_loader: Any,
     validation_loader: Any,
     clip_grad_norm: float | None,
@@ -42,6 +43,7 @@ def do_hyperparameter_evaluation(
 
     Returns: None
     """
+    print("Hyper parameter tuning started")
     hp1_name = list(hyperparameter1.keys())[0]
     hp2_name = list(hyperparameter2.keys())[0]
 
@@ -55,9 +57,11 @@ def do_hyperparameter_evaluation(
         for j, hp2 in enumerate(hyperparameter2[hp2_name]):
             print(f"Current {hp2_name} {hp2}")
             try:
-                hyperparameter_dic = {hp1_name: hp1, hp2_name: hp2}
+                hyperparameter_dic = {hp2_name: hp2}
 
-                model_to_tune = model(random_state=67, **hyperparameter_dic, **kwargs)
+                model_to_tune = model(
+                    vocab_size=vocab_size, **hyperparameter_dic, **kwargs
+                )
 
                 training_loop(
                     model=model_to_tune,
@@ -65,7 +69,7 @@ def do_hyperparameter_evaluation(
                     val_loader=validation_loader,
                     lr=hp1,
                     clip_grad_norm=clip_grad_norm,
-                    patience=hp2,
+                    patience=3,
                 )
 
                 dictionary_validation = evaluation_loop(
