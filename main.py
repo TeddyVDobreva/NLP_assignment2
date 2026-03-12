@@ -38,7 +38,7 @@ def set_seed(seed: int = 67) -> None:
     torch.backends.cudnn.benchmark = False
 
 
-train_loader, val_loader, test_loader, vocab = get_preprocessed_data("data", True)
+train_loader, val_loader, test_loader, vocab = get_preprocessed_data("data")
 vocab_size = len(vocab)
 
 set_seed()
@@ -64,7 +64,7 @@ cnn = CNNTextClassifier(
 # Hyperparameter tuning
 do_hyperparameter_evaluation(
     CNNTextClassifier,
-    {"lr": [0.01, 0.001, 0.0001, 0.00001]},
+    {"lr": [0.01, 0.001, 0.0001]},
     {"embed_dim": [64, 128, 256]},
     vocab_size=vocab_size,
     train_loader=train_loader,

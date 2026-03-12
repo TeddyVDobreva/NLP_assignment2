@@ -1,8 +1,8 @@
-import torch
-import torch.nn as nn
 import time
 
 import numpy as np
+import torch
+import torch.nn as nn
 from sklearn.metrics import accuracy_score, f1_score
 
 MAX_EPOCHS = 50
@@ -220,7 +220,7 @@ class CNNTextClassifier(nn.Module):
         vocab_size: int,
         embed_dim: int = 64,
         num_filters: int = 64,
-        kernel_sizes: tuple = (3, 4, 5),
+        kernel_sizes: tuple = (3, 4),
         dropout: float = 0.3,
         pad_idx: int = 0,
         num_classes: int = 4,
