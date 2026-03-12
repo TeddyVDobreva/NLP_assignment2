@@ -64,7 +64,7 @@ class CNNTextClassifier(nn.Module):
                 for k in kernel_sizes
             ]
         )
-        self.pool = nn.AdaptiveMaxPool1d()
+        self.pool = nn.MaxPool1d(kernel_size=3, stride=2)
         self.rep_dropout = nn.Dropout(dropout)
         self.res = nn.Linear(num_filters * len(kernel_sizes), num_classes)
         self.fc = nn.Softmax(0)
