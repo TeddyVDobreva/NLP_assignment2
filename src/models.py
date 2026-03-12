@@ -176,12 +176,13 @@ class LSTMClassifier(nn.Module):
             hidden_size=hidden_dim,
             num_layers=num_layers,
             batch_first=True,
-            dropout=dropout if num_layers > 1 else 0.0,
+            dropout=0.0,
             bidirectional=bidirectional,
         )
         rep_dim = hidden_dim * (2 if bidirectional else 1)
+        self.pool = nn.AvgPool1d(kernel_size=3, stride=1)
         self.rep_dropout = nn.Dropout(dropout)
-        self.res = nn.Linear(rep_dim, num_classes)
+        self.res = nn.Linear(rep_dim - 2, num_classes)
         self.fc = nn.Softmax(0)
 
     def forward(self, x: torch.Tensor, lengths: torch.Tensor) -> torch.Tensor:
@@ -191,7 +192,8 @@ class LSTMClassifier(nn.Module):
         )
         _, (h_n, _) = self.lstm(packed)  # h_n: (num_layers * dirs, B, H)
         h_last = h_n[-1]  # last layer, last direction
-        rep = self.rep_dropout(h_last)
+        rep = self.pool(h_last)
+        rep = self.rep_dropout(rep)
         res = self.res(rep)
         return self.fc(res)
 
