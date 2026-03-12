@@ -17,12 +17,12 @@ MAX_LEN = 64
 BATCH_SIZE = 32
 
 # Subsample for speed
-N_TRAIN = 512
-N_VAL = 128
-N_TEST = 128
+N_TRAIN = 500
+N_VAL = 100
+N_TEST = 100
 
 
-def get_raw_data(path):
+def _get_raw_data(path):
     train_data = pd.read_csv(path + "/train.csv")
     test_data = pd.read_csv(path + "/test.csv")
 
@@ -56,27 +56,27 @@ def get_raw_data(path):
     }
 
 
-def get_smaller_datasets(raw):
+def _get_smaller_datasets(raw):
     train = raw["train"].shuffle(seed=67).select(range(N_TRAIN))
     validation = raw["validation"].shuffle(seed=67).select(range(N_VAL))
     test = raw["test"].select(range(N_TEST))
     return train, validation, test
 
 
-def get_datasets(raw):
+def _get_datasets(raw):
     train = raw["train"].shuffle(seed=67)  # We only shuffle the training set
     validation = raw["validation"]
     test = raw["test"]
     return train, validation, test
 
 
-def tokenize_data(data):
+def _tokenize_data(data):
     tokenizer = tf_text.UnicodeScriptTokenizer()
     tokens = tokenizer.tokenize([data])
     return tokens.to_list()[0]
 
 
-def build_vocab(texts, min_freq: int = 2, max_size: int = 30000) -> dict:
+def _build_vocab(texts, min_freq: int = 2, max_size: int = 30000) -> dict:
     """
     Build a vocabulary mapping from tokens to integer indices.
     The vocabulary will include only tokens that appear at least `min_freq` times,
@@ -84,7 +84,7 @@ def build_vocab(texts, min_freq: int = 2, max_size: int = 30000) -> dict:
     """
     counter = Counter()
     for text in texts:
-        counter.update(tokenize_data(text))
+        counter.update(_tokenize_data(text))
     # Reserve 0 for PAD and 1 for UNK.
     vocab = {PAD: 0, UNK: 1}
     for word, freq in counter.most_common():
@@ -96,7 +96,7 @@ def build_vocab(texts, min_freq: int = 2, max_size: int = 30000) -> dict:
     return vocab
 
 
-def numericalize(tokens: list, vocab: dict) -> list:
+def _numericalize(tokens: list, vocab: dict) -> list:
     """
     Convert a list of tokens into a list of integer indices using the provided vocabulary.
     Tokens not found in the vocabulary will be mapped to the index of UNK.
@@ -123,13 +123,13 @@ class TextDataset(Dataset):
     def __getitem__(self, idx: int) -> tuple:
         """Given an index, return the token ids and label for the corresponding sample."""
         item = self.ds[idx]
-        tokens = tokenize_data(item["text"])
+        tokens = _tokenize_data(item["text"])
 
         # Convert to ids and truncate
         if len(tokens) == 0:
             ids = [self.vocab[UNK]]
         else:
-            ids = numericalize(tokens, self.vocab)[: self.max_len]
+            ids = _numericalize(tokens, self.vocab)[: self.max_len]
             if len(ids) == 0:
                 ids = [self.vocab[UNK]]
 
@@ -149,10 +149,10 @@ def collate(batch: list) -> Batch:
     return Batch(x=x, lengths=lengths, y=y)
 
 
-def plot_lengths(data):
+def _plot_lengths(data):
     Path("plots").mkdir(exist_ok=True)
 
-    lengths = [len(tokenize_data(text)) for text in data["text"]]
+    lengths = [len(_tokenize_data(text)) for text in data["text"]]
     plt.hist(lengths, bins=50)
     plt.title("Distribution of tokenized text lengths in training set")
     plt.xlabel("Length of tokenized text")
@@ -161,10 +161,7 @@ def plot_lengths(data):
     plt.close()
 
 
-def preprocess_data(
-    train_ds_hf: pd.DataFrame,
-    val_ds_hf: pd.DataFrame,
-    test_ds_hf: pd.DataFrame,
+def get_preprocessed_data(path, small_datasets = False, plots = False
 ) -> tuple[
     Any,  # X_train
     Any,  # X_validation
@@ -192,14 +189,24 @@ def preprocess_data(
             - original_validation: Validation set.
             - original_test: Test set.
     """
+    raw = _get_raw_data(path)
+    
+    if small_datasets:
+        train_ds_hf, val_ds_hf, test_ds_hf = _get_smaller_datasets(raw)
+    else:
+        train_ds_hf, val_ds_hf, test_ds_hf = _get_datasets(raw)
 
-    vocab = build_vocab(train_ds_hf["text"], min_freq=2, max_size=30000)
+    print(
+        f"Dataset lengths: train={len(train_ds_hf)}, val={len(val_ds_hf)}, test={len(test_ds_hf)}"
+    )
+
+    vocab = _build_vocab(train_ds_hf["text"], min_freq=2, max_size=30000)
+    
+    if plots:
+        _plot_lengths(train_ds_hf)
 
     print(f"Using MAX_LEN={MAX_LEN} and BATCH_SIZE={BATCH_SIZE}")
     
-    sample = train_ds_hf[0]["text"]
-    print(tokenize_data(sample)[:20], numericalize(tokenize_data(sample)[:20], vocab)[:20])
-
     train_ds = TextDataset(train_ds_hf, vocab, max_len=MAX_LEN)
     val_ds = TextDataset(val_ds_hf, vocab, max_len=MAX_LEN)
     test_ds = TextDataset(test_ds_hf, vocab, max_len=MAX_LEN)

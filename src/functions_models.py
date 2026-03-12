@@ -46,7 +46,6 @@ def training_loop(
     lr: float = 1e-3,
     max_epochs: int = 20,
     weight_decay: float = 0.0,
-    clip_grad_norm: float | None = None,
     patience: int | None = 3,
 ) -> list:
     """

@@ -8,7 +8,7 @@ import seaborn as sns
 from sklearn.metrics import accuracy_score
 
 from functions_models import evaluation_loop, training_loop
-from models import CNNTextClassifier, LSTMClassifier
+from src.models import CNNTextClassifier, LSTMClassifier
 
 
 def do_hyperparameter_evaluation(
