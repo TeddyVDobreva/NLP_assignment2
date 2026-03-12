@@ -83,7 +83,7 @@ print("CNN: ", count_parameters(cnn))
 # Hyperparameter tuning
 do_hyperparameter_evaluation(
     CNNTextClassifier,
-    {"lr": [0.1, 0.05, 0.01, 0.001]},
+    {"lr": [0.01, 0.001, 0.0001, 0.00001]},
     {"embed_dim": [64, 128, 256]},
     vocab_size=vocab_size,
     train_loader=train_loader,
