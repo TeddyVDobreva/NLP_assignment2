@@ -7,7 +7,7 @@ import pandas as pd
 import seaborn as sns
 from sklearn.metrics import accuracy_score
 
-from functions_models import evaluation_loop, training_loop
+from src.functions_models import evaluation_loop, training_loop
 from src.models import CNNTextClassifier, LSTMClassifier
 
 
