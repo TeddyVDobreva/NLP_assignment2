@@ -14,6 +14,7 @@ from src.models import CNNTextClassifier, LSTMClassifier
 MAX_EPOCHS = 12
 PATIENCE = 3
 LR = 1e-3
+CLIP = 1
 
 
 def count_parameters(model: nn.Module) -> int:
@@ -32,12 +33,12 @@ def train_and_time(name: str, model: nn.Module):
     )
     total_time = time.perf_counter() - t0
     val = evaluation_loop(model, val_loader)
-    test = evaluation_loop(model, test_loader)
+    # test = evaluation_loop(model, test_loader)
     return {
         "name": name,
         "hist": hist,
         "val": val,
-        "test": test,
+        # "test": test,
         "time_s_total": total_time,
     }
 
@@ -78,6 +79,16 @@ cnn = CNNTextClassifier(
 print("Number of trainable parameters:")
 print("LSTM:", count_parameters(lstm))
 print("CNN: ", count_parameters(cnn))
+
+# Hyperparameter tuning
+do_hyperparameter_evaluation(
+    CNNTextClassifier,
+    {"lr": [0.1, 0.05, 0.01, 0.001]},
+    {"embed_dim": [64, 128, 256]},
+    vocab_size=vocab_size,
+    train_loader=train_loader,
+    validation_loader=val_loader,
+)
 
 print("Training LSTM...")
 res_lstm = train_and_time("LSTM", lstm)

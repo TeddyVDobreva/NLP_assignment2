@@ -18,7 +18,6 @@ def do_hyperparameter_evaluation(
     vocab_size: int,
     train_loader: Any,
     validation_loader: Any,
-    clip_grad_norm: float | None,
     **kwargs: Any,
 ) -> None:
     """
@@ -68,7 +67,6 @@ def do_hyperparameter_evaluation(
                     train_loader=train_loader,
                     val_loader=validation_loader,
                     lr=hp1,
-                    clip_grad_norm=clip_grad_norm,
                     patience=3,
                 )
 
@@ -81,8 +79,8 @@ def do_hyperparameter_evaluation(
                 )
 
                 accuracy_matrix[i, j] = validation_accuracy
-            except:
-                print("Skip unsupported combination of hyperparameters")
+            except Exception as e:
+                print(f"Skipping combination — {e}")
         print()
 
     make_heatmap(accuracy_matrix, hyperparameter1, hyperparameter2)

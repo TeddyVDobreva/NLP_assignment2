@@ -57,9 +57,14 @@ class CNNTextClassifier(nn.Module):
         self.embedding = nn.Embedding(vocab_size, embed_dim, padding_idx=pad_idx)
         self.emb_dropout = nn.Dropout(dropout)
         self.convs = nn.ModuleList(
-            [nn.Conv1d(in_channels=embed_dim, out_channels=num_filters, kernel_size=k)
-             for k in kernel_sizes]
+            [
+                nn.Conv1d(
+                    in_channels=embed_dim, out_channels=num_filters, kernel_size=k
+                )
+                for k in kernel_sizes
+            ]
         )
+        self.pool = nn.AdaptiveMaxPool1d()
         self.rep_dropout = nn.Dropout(dropout)
         self.res = nn.Linear(num_filters * len(kernel_sizes), num_classes)
         self.fc = nn.Softmax(0)
@@ -74,6 +79,7 @@ class CNNTextClassifier(nn.Module):
             p = torch.max(z, dim=2).values  # (B, F)
             pooled.append(p)
         rep = torch.cat(pooled, dim=1)  # (B, F * |K|)
+        rep = self.pool(rep)
         rep = self.rep_dropout(rep)
         res = self.res(rep)
         return self.fc(res)
