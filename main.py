@@ -38,7 +38,7 @@ def set_seed(seed: int = 67) -> None:
     torch.backends.cudnn.benchmark = False
 
 
-train_loader, val_loader, test_loader, vocab = get_preprocessed_data("data")
+train_loader, val_loader, test_loader, vocab = get_preprocessed_data("data", False, True)
 vocab_size = len(vocab)
 
 set_seed()

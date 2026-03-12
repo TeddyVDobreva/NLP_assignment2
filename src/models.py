@@ -7,7 +7,7 @@ from sklearn.metrics import accuracy_score, f1_score
 
 MAX_EPOCHS = 50
 PATIENCE = 3
-LR = 1e-3
+LR = 0.001
 
 
 def _evaluation_loop(model, loader) -> dict:

@@ -112,30 +112,37 @@ class Batch:
 
 
 class TextDataset(Dataset):
-    def __init__(self, hf_ds: dict, vocab: dict, max_len: int = 200) -> None:
-        self.ds = hf_ds
+    def __init__(self, hf_ds: dict, vocab: dict, max_len: int = 200, from_file = False, nums = None, labs = None) -> None:
         self.vocab = vocab
         self.max_len = max_len
+        self.labels = []
+        self.numericalized = []
+        if from_file:
+            self.numericalized = nums
+            self.labels = labs
+        else:
+            self._numericalize_all(hf_ds)
+        
+    def _numericalize_all(self, hf_ds):
+        for item in hf_ds:
+            tokens = _tokenize_data(item["text"])
+            # Convert to ids and truncate
+            if len(tokens) == 0:
+                ids = [self.vocab[UNK]]
+            else:
+                ids = _numericalize(tokens, self.vocab)[: self.max_len]
+                if len(ids) == 0:
+                    ids = [self.vocab[UNK]]
+            self.numericalized.append(ids)
+            self.labels.append(int(item["label"]) -1)
 
     def __len__(self):
         """Return the number of samples in the dataset."""
-        return len(self.ds)
+        return len(self.labels)
 
     def __getitem__(self, idx: int) -> tuple:
         """Given an index, return the token ids and label for the corresponding sample."""
-        item = self.ds[idx]
-        tokens = _tokenize_data(item["text"])
-
-        # Convert to ids and truncate
-        if len(tokens) == 0:
-            ids = [self.vocab[UNK]]
-        else:
-            ids = _numericalize(tokens, self.vocab)[: self.max_len]
-            if len(ids) == 0:
-                ids = [self.vocab[UNK]]
-
-        label = int(item["label"]) - 1
-        return ids, label
+        return self.numericalized[idx], self.labels[idx]
 
 
 def collate(batch: list) -> Batch:
@@ -203,15 +210,37 @@ def get_preprocessed_data(
     )
 
     vocab = _build_vocab(train_ds_hf["text"], min_freq=2, max_size=30000)
-
+    
     if plots:
         _plot_lengths(train_ds_hf)
 
     print(f"Using MAX_LEN={MAX_LEN} and BATCH_SIZE={BATCH_SIZE}")
-
+  
     train_ds = TextDataset(train_ds_hf, vocab, max_len=MAX_LEN)
+    print('check')
     val_ds = TextDataset(val_ds_hf, vocab, max_len=MAX_LEN)
+    print('check')
     test_ds = TextDataset(test_ds_hf, vocab, max_len=MAX_LEN)
+    print('check')
+    
+    with open("data/fast.txt", "a") as f:
+        for i in range(len(train_ds)):
+            for j in train_ds[i][0]:
+                f.write(f"{j},")
+            f.write(f"{train_ds[i][1]}\n")
+        f.write("\n")
+        for i in range(len(val_ds)):
+            for j in val_ds[i][0]:
+                f.write(f"{j},")
+            f.write(f"{val_ds[i][1]}\n")
+        f.write("\n")
+        for i in range(len(test_ds)):
+            for j in test_ds[i][0]:
+                f.write(f"{j},")
+            f.write(f"{test_ds[i][1]}\n")
+        f.write("\n")
+        for j in vocab:
+            f.write(f"{j},{vocab[j]}\n")
 
     train_loader = DataLoader(
         train_ds, batch_size=BATCH_SIZE, shuffle=True, collate_fn=collate
@@ -228,3 +257,16 @@ def get_preprocessed_data(
         test_loader,
         vocab,
     )
+
+
+def get_from_fast_file(path):
+    data = []
+    labels = []
+    with open('data/fast.txt', 'r') as file:
+        for line in file:
+            if line == '':
+                break
+            t = line.strip().split(',')
+            data.append(t[:-1])
+            labels.append(t[-1])
+    
