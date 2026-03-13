@@ -10,7 +10,6 @@ import torch
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, Dataset
 from datasets import Dataset as ds
-import tensorflow as tf
 
 PAD = "<pad>"
 UNK = "<unk>"
@@ -113,7 +112,15 @@ class Batch:
 
 
 class TextDataset(Dataset):
-    def __init__(self, hf_ds: dict, vocab: dict, max_len: int = 200, from_file = False, nums = None, labs = None) -> None:
+    def __init__(
+        self,
+        hf_ds: dict,
+        vocab: dict,
+        max_len: int = 200,
+        from_file=False,
+        nums=None,
+        labs=None,
+    ) -> None:
         self.vocab = vocab
         self.max_len = max_len
         self.labels = []
@@ -123,7 +130,7 @@ class TextDataset(Dataset):
             self.labels = labs
         else:
             self._numericalize_all(hf_ds)
-        
+
     def _numericalize_all(self, hf_ds):
         for item in hf_ds:
             tokens = _tokenize_data(item["text"])
@@ -135,7 +142,7 @@ class TextDataset(Dataset):
                 if len(ids) == 0:
                     ids = [self.vocab[UNK]]
             self.numericalized.append(ids)
-            self.labels.append(int(item["label"]) -1)
+            self.labels.append(int(item["label"]) - 1)
 
     def __len__(self):
         """Return the number of samples in the dataset."""
@@ -211,42 +218,15 @@ def get_preprocessed_data(
     )
 
     vocab = _build_vocab(train_ds_hf["text"], min_freq=2, max_size=30000)
-    
+
     if plots:
         _plot_lengths(train_ds_hf)
 
     print(f"Using MAX_LEN={MAX_LEN} and BATCH_SIZE={BATCH_SIZE}")
-  
+
     train_ds = TextDataset(train_ds_hf, vocab, max_len=MAX_LEN)
-    print('check')
     val_ds = TextDataset(val_ds_hf, vocab, max_len=MAX_LEN)
-    print('check')
     test_ds = TextDataset(test_ds_hf, vocab, max_len=MAX_LEN)
-    print('check')
-    
-    with open("data/fast.txt", "a") as f:
-        for j in vocab:
-            try:
-                word = str(j).split("'")[1]
-            except IndexError:
-                word = str(j)
-            f.write(f"{word}, {vocab[j]}\n")
-        f.write("\n")
-        for i in range(len(train_ds)):
-            for j in train_ds[i][0]:
-                f.write(f"{j},")
-            f.write(f"{train_ds[i][1]}\n")
-        f.write("\n")
-        for i in range(len(val_ds)):
-            for j in val_ds[i][0]:
-                f.write(f"{j},")
-            f.write(f"{val_ds[i][1]}\n")
-        f.write("\n")
-        for i in range(len(test_ds)):
-            for j in test_ds[i][0]:
-                f.write(f"{j},")
-            f.write(f"{test_ds[i][1]}\n")
-        
 
     train_loader = DataLoader(
         train_ds, batch_size=BATCH_SIZE, shuffle=True, collate_fn=collate
@@ -273,34 +253,40 @@ def get_from_fast_file():
     test_data = []
     test_labels = []
     vocab = {}
-    with open('data/fast.txt', 'r') as file:
+    with open("data/fast.txt", "r") as file:
         for line in file:
             if line == "\n" or line is None:
                 break
-            t = line.strip().split(', ')
-            vocab[t[0].encode() if t[1] not in ['0', '1'] else t[0]]=int(t[1])
+            t = line.strip().split(", ")
+            vocab[t[0].encode() if t[1] not in ["0", "1"] else t[0]] = int(t[1])
         for line in file:
             if line == "\n" or line is None:
                 break
-            t = line.strip().split(',')
+            t = line.strip().split(",")
             train_data.append([int(x) for x in t[:-1]])
             train_labels.append(int(t[-1]))
         for line in file:
             if line == "\n" or line is None:
                 break
-            t = line.strip().split(',')
+            t = line.strip().split(",")
             val_data.append([int(x) for x in t[:-1]])
             val_labels.append(int(t[-1]))
         for line in file:
-            t = line.strip().split(',')
+            t = line.strip().split(",")
             test_data.append([int(x) for x in t[:-1]])
             test_labels.append(int(t[-1]))
-            
-    train_ds = TextDataset({}, vocab, max_len=MAX_LEN, from_file=True, nums=train_data, labs=train_labels)
-    val_ds = TextDataset({}, vocab, max_len=MAX_LEN, from_file=True, nums=val_data, labs=val_labels)
-    test_ds = TextDataset({}, vocab, max_len=MAX_LEN, from_file=True, nums=test_data, labs=test_labels)
+
+    train_ds = TextDataset(
+        {}, vocab, max_len=MAX_LEN, from_file=True, nums=train_data, labs=train_labels
+    )
+    val_ds = TextDataset(
+        {}, vocab, max_len=MAX_LEN, from_file=True, nums=val_data, labs=val_labels
+    )
+    test_ds = TextDataset(
+        {}, vocab, max_len=MAX_LEN, from_file=True, nums=test_data, labs=test_labels
+    )
     train_loader = DataLoader(
-    train_ds, batch_size=BATCH_SIZE, shuffle=True, collate_fn=collate
+        train_ds, batch_size=BATCH_SIZE, shuffle=True, collate_fn=collate
     )
     val_loader = DataLoader(
         val_ds, batch_size=BATCH_SIZE, shuffle=False, collate_fn=collate
@@ -308,12 +294,10 @@ def get_from_fast_file():
     test_loader = DataLoader(
         test_ds, batch_size=BATCH_SIZE, shuffle=False, collate_fn=collate
     )
-    
+
     return (
         train_loader,
         val_loader,
         test_loader,
         vocab,
     )
-        
-    
