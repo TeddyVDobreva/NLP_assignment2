@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 from pandas import DataFrame
 
-from src.data_handler import get_preprocessed_data
+from src.data_handler import get_preprocessed_data, get_from_fast_file
 from src.hyperparameter_evaluation import do_hyperparameter_evaluation
 from src.models import CNNTextClassifier, LSTMClassifier
 
@@ -39,13 +39,14 @@ def set_seed(seed: int = 67) -> None:
 
 
 train_loader, val_loader, test_loader, vocab = get_preprocessed_data("data", False, True)
+# train_loader, val_loader, test_loader, vocab = get_from_fast_file()
 vocab_size = len(vocab)
 
 set_seed()
 
 lstm = LSTMClassifier(
     vocab_size=vocab_size,
-    embed_dim=64,
+    embed_dim=128,
     hidden_dim=64,
     num_layers=2,
     dropout=0.3,
@@ -54,9 +55,9 @@ lstm = LSTMClassifier(
 
 cnn = CNNTextClassifier(
     vocab_size=vocab_size,
-    embed_dim=64,
+    embed_dim=128,
     num_filters=64,
-    kernel_sizes=(3, 4, 5),
+    kernel_sizes=(3, 4),
     dropout=0.3,
     pad_idx=0,
 )

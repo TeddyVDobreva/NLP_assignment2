@@ -10,11 +10,12 @@ import torch
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, Dataset
 from datasets import Dataset as ds
+import tensorflow as tf
 
 PAD = "<pad>"
 UNK = "<unk>"
 MAX_LEN = 64
-BATCH_SIZE = 32
+BATCH_SIZE = 64
 
 # Subsample for speed
 N_TRAIN = 500
@@ -142,7 +143,7 @@ class TextDataset(Dataset):
 
     def __getitem__(self, idx: int) -> tuple:
         """Given an index, return the token ids and label for the corresponding sample."""
-        return self.numericalized[idx], self.labels[idx]
+        return self.numericalized[idx][: self.max_len], self.labels[idx]
 
 
 def collate(batch: list) -> Batch:
@@ -224,6 +225,13 @@ def get_preprocessed_data(
     print('check')
     
     with open("data/fast.txt", "a") as f:
+        for j in vocab:
+            try:
+                word = str(j).split("'")[1]
+            except IndexError:
+                word = str(j)
+            f.write(f"{word}, {vocab[j]}\n")
+        f.write("\n")
         for i in range(len(train_ds)):
             for j in train_ds[i][0]:
                 f.write(f"{j},")
@@ -238,9 +246,7 @@ def get_preprocessed_data(
             for j in test_ds[i][0]:
                 f.write(f"{j},")
             f.write(f"{test_ds[i][1]}\n")
-        f.write("\n")
-        for j in vocab:
-            f.write(f"{j},{vocab[j]}\n")
+        
 
     train_loader = DataLoader(
         train_ds, batch_size=BATCH_SIZE, shuffle=True, collate_fn=collate
@@ -259,14 +265,55 @@ def get_preprocessed_data(
     )
 
 
-def get_from_fast_file(path):
-    data = []
-    labels = []
+def get_from_fast_file():
+    train_data = []
+    train_labels = []
+    val_data = []
+    val_labels = []
+    test_data = []
+    test_labels = []
+    vocab = {}
     with open('data/fast.txt', 'r') as file:
         for line in file:
-            if line == '':
+            if line == "\n" or line is None:
+                break
+            t = line.strip().split(', ')
+            vocab[t[0].encode() if t[1] not in ['0', '1'] else t[0]]=int(t[1])
+        for line in file:
+            if line == "\n" or line is None:
                 break
             t = line.strip().split(',')
-            data.append(t[:-1])
-            labels.append(t[-1])
+            train_data.append([int(x) for x in t[:-1]])
+            train_labels.append(int(t[-1]))
+        for line in file:
+            if line == "\n" or line is None:
+                break
+            t = line.strip().split(',')
+            val_data.append([int(x) for x in t[:-1]])
+            val_labels.append(int(t[-1]))
+        for line in file:
+            t = line.strip().split(',')
+            test_data.append([int(x) for x in t[:-1]])
+            test_labels.append(int(t[-1]))
+            
+    train_ds = TextDataset({}, vocab, max_len=MAX_LEN, from_file=True, nums=train_data, labs=train_labels)
+    val_ds = TextDataset({}, vocab, max_len=MAX_LEN, from_file=True, nums=val_data, labs=val_labels)
+    test_ds = TextDataset({}, vocab, max_len=MAX_LEN, from_file=True, nums=test_data, labs=test_labels)
+    train_loader = DataLoader(
+    train_ds, batch_size=BATCH_SIZE, shuffle=True, collate_fn=collate
+    )
+    val_loader = DataLoader(
+        val_ds, batch_size=BATCH_SIZE, shuffle=False, collate_fn=collate
+    )
+    test_loader = DataLoader(
+        test_ds, batch_size=BATCH_SIZE, shuffle=False, collate_fn=collate
+    )
+    
+    return (
+        train_loader,
+        val_loader,
+        test_loader,
+        vocab,
+    )
+        
     
