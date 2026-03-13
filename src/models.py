@@ -209,7 +209,7 @@ class LSTMClassifier(nn.Module):
         weight_decay: float = 0.0,
         patience: int | None = PATIENCE,
     ):
-        _training_loop(
+        return _training_loop(
             self, train_loader, val_loader, lr, max_epochs, weight_decay, patience
         )
 
@@ -268,6 +268,6 @@ class CNNTextClassifier(nn.Module):
         weight_decay: float = 0.0,
         patience: int | None = PATIENCE,
     ):
-        _training_loop(
+        return _training_loop(
             self, train_loader, val_loader, lr, max_epochs, weight_decay, patience
         )
