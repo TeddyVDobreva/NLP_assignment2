@@ -1,12 +1,36 @@
 import time
+from typing import Any, Dict, Iterable
+
 from src.evaluation import compare
 
 
-def ablation(model, name, ablatioin_argument, train_loader, val_loader, **kwargs):
+def ablation(
+    model: Any,
+    name: str,
+    ablation_argument: Dict[str, Iterable[Any]],
+    train_loader: Any,
+    val_loader: Any,
+    **kwargs: Any,
+) -> None:
+    """
+    The function trains a separate model for each hyperparameter value,
+    evaluates it on the validation set, and records the training time
+    and performance.
 
-    hyperparameter_name = list(ablatioin_argument.keys())[0]
-    results = [None for _ in ablatioin_argument[hyperparameter_name]]
-    for i, hp in enumerate(ablatioin_argument[hyperparameter_name]):
+    Args:
+        model: the model
+        name: name of the model
+        ablation_argument:contains hyperparameter and its values
+        train_loader: data loader containing the training dataset
+        val_loader: data loader containing the validation dataset
+
+    Returns:
+        None
+    """
+
+    hyperparameter_name = list(ablation_argument.keys())[0]
+    results: list[dict[str, Any]] = []
+    for i, hp in enumerate(ablation_argument[hyperparameter_name]):
         hyperparameter_dic = {hyperparameter_name: hp}
         m = model(**hyperparameter_dic, **kwargs)
         t0 = time.perf_counter()
