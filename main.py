@@ -4,9 +4,8 @@ from typing import Any
 
 import numpy as np
 import torch
-import torch.nn as nn
 from src.ablation import ablation
-from src.data_handler import get_from_fast_file, get_preprocessed_data
+from src.data_handler import get_preprocessed_data
 from src.evaluation import (
     compare,
     do_final_evaluation,
@@ -71,7 +70,6 @@ def set_seed(seed: int = 67) -> None:
 
 # get the data
 train_loader, val_loader, test_loader, vocab = get_preprocessed_data("data", plots=True)
-# train_loader, val_loader, test_loader, vocab = get_from_fast_file()
 vocab_size = len(vocab)
 
 set_seed()

@@ -207,5 +207,5 @@ def show_errors(name: str, errs: list) -> None:
     for i, (y, p, snip) in enumerate(errs):
         print()
         print(f"error {i + 1}")
-        print("true:", LABELS[y - 1], "pred:", LABELS[p - 1])
+        print("true:", LABELS[y - 1], "pred:", LABELS[p])
         print("text:", snip)

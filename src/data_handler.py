@@ -190,20 +190,13 @@ class TextDataset(Dataset):
         hf_ds: dict,
         vocab: dict,
         max_len: int = 200,
-        from_file=False,
-        nums=None,
-        labs=None,
     ) -> None:
 
         self.vocab = vocab
         self.max_len = max_len
         self.labels = []
         self.numericalized = []
-        if from_file:
-            self.numericalized = nums if nums is not None else []
-            self.labels = labs if labs is not None else []
-        else:
-            self._numericalize_all(hf_ds)
+        self._numericalize_all(hf_ds)
 
     def _numericalize_all(self, hf_ds: dict):
         """
@@ -241,7 +234,7 @@ class TextDataset(Dataset):
         Returns:
             Tuple which contains the token id sequence and the label
         """
-        return self.numericalized[idx][: self.max_len], self.labels[idx]
+        return self.numericalized[idx], self.labels[idx]
 
 
 def collate(batch: list) -> Batch:
@@ -349,76 +342,6 @@ def get_preprocessed_data(
     test_loader = DataLoader(
         test_ds, batch_size=BATCH_SIZE, shuffle=False, collate_fn=collate
     )
-    return (
-        train_loader,
-        val_loader,
-        test_loader,
-        vocab,
-    )
-
-
-def get_from_fast_file() -> Tuple[DataLoader, DataLoader, DataLoader, Dict[str, int]]:
-    """
-    The function reads a file containing the vocabulary and the numericalized
-    datasets (train, validation, and test). It reconstructs the datasets,
-    creates DataLoader objects, and returns them together with the vocabulary.
-
-    Returns:
-        A tuple containing:
-            - train_loader: DataLoader for the training dataset
-            - val_loader: DataLoader for the validation dataset
-            - test_loader: DataLoader for the test dataset
-            - vocab: Dictionary mapping tokens to indices
-    """
-    train_data = []
-    train_labels = []
-    val_data = []
-    val_labels = []
-    test_data = []
-    test_labels = []
-    vocab = {}
-    with open("data/fast.txt", "r") as file:
-        for line in file:
-            if line == "\n" or line is None:
-                break
-            t = line.strip().split(", ")
-            vocab[t[0].encode() if t[1] not in ["0", "1"] else t[0]] = int(t[1])
-        for line in file:
-            if line == "\n" or line is None:
-                break
-            t = line.strip().split(",")
-            train_data.append([int(x) for x in t[:-1]])
-            train_labels.append(int(t[-1]))
-        for line in file:
-            if line == "\n" or line is None:
-                break
-            t = line.strip().split(",")
-            val_data.append([int(x) for x in t[:-1]])
-            val_labels.append(int(t[-1]))
-        for line in file:
-            t = line.strip().split(",")
-            test_data.append([int(x) for x in t[:-1]])
-            test_labels.append(int(t[-1]))
-
-    train_ds = TextDataset(
-        {}, vocab, max_len=MAX_LEN, from_file=True, nums=train_data, labs=train_labels
-    )
-    val_ds = TextDataset(
-        {}, vocab, max_len=MAX_LEN, from_file=True, nums=val_data, labs=val_labels
-    )
-    test_ds = TextDataset(
-        {}, vocab, max_len=MAX_LEN, from_file=True, nums=test_data, labs=test_labels
-    )
-    train_loader = DataLoader(
-        train_ds, batch_size=BATCH_SIZE, shuffle=True, collate_fn=collate
-    )
-    val_loader = DataLoader(
-        val_ds, batch_size=BATCH_SIZE, shuffle=False, collate_fn=collate
-    )
-    test_loader = DataLoader(
-        test_ds, batch_size=BATCH_SIZE, shuffle=False, collate_fn=collate
-    )
-
     return (
         train_loader,
         val_loader,
