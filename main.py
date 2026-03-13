@@ -1,24 +1,41 @@
 import random
 import time
+from typing import Any
 
 import numpy as np
 import torch
 import torch.nn as nn
-
+from src.ablation import ablation
+from src.data_handler import get_from_fast_file, get_preprocessed_data
 from src.evaluation import (
-    plot_learning_curves,
-    plot_confucion_matrix,
     compare,
     do_final_evaluation,
     get_misclassified_examples,
+    plot_confusion_matrix,
+    plot_learning_curves,
 )
-from src.ablation import ablation
-from src.data_handler import get_preprocessed_data, get_from_fast_file
 from src.hyperparameter_evaluation import do_hyperparameter_evaluation
 from src.models import CNNTextClassifier, LSTMClassifier
 
 
-def train_and_time(name: str, model: nn.Module, train, validation):
+def train_and_time(
+    name: str, model: Any, train: Any, validation: Any
+) -> dict[str, Any]:
+    """
+    Function trains the model, measures the training time, and evaluates it
+    on the validation set.
+
+    Args:
+        name: name of model
+        model: the model to be evaluated
+        train: training loader
+        validation: validation loader
+
+    Returns:
+        Dictionary containing the model's name, training history, validation
+        results, and the total training time
+
+    """
     t0 = time.perf_counter()
     hist = model.fit(
         train,
@@ -35,7 +52,15 @@ def train_and_time(name: str, model: nn.Module, train, validation):
 
 
 def set_seed(seed: int = 67) -> None:
-    """Set random seeds for reproducibility."""
+    """
+    Set random seeds for reproducibility.
+
+    Args:
+        seed: random seed
+
+    Returns:
+        None
+    """
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -94,8 +119,8 @@ compare([res_lstm, res_cnn])
 plot_learning_curves([res_lstm, res_cnn])
 
 # plot confusion matrixes
-plot_confucion_matrix(lstm, val_loader, "LSTM", "validation")
-plot_confucion_matrix(cnn, val_loader, "CNN", "validation")
+plot_confusion_matrix(lstm, val_loader, "LSTM", "validation")
+plot_confusion_matrix(cnn, val_loader, "CNN", "validation")
 
 # do ablation study
 print("\nAblation results")
@@ -129,5 +154,5 @@ do_final_evaluation(lstm, test_loader, "LSTM", "testing")
 do_final_evaluation(cnn, test_loader, "CNN", "testing")
 
 # error analysis
-get_misclassified_examples(lstm, "LSTM", 'data', vocab, max_items = 10)
-get_misclassified_examples(cnn, "CNN", 'data', vocab, max_items = 10)
+get_misclassified_examples(lstm, "LSTM", "data", vocab, max_items=10)
+get_misclassified_examples(cnn, "CNN", "data", vocab, max_items=10)

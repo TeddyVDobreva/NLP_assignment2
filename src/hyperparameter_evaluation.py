@@ -10,7 +10,7 @@ from src.models import CNNTextClassifier, LSTMClassifier
 
 
 def do_hyperparameter_evaluation(
-    model: CNNTextClassifier | LSTMClassifier,
+    model: Any,
     hyperparameter1: dict[str, list],
     hyperparameter2: dict[str, list],
     vocab_size: int,

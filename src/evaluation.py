@@ -1,19 +1,31 @@
-import matplotlib.pyplot as plt
 from pathlib import Path
-from pandas import DataFrame
+from typing import Any
+
+import matplotlib.pyplot as plt
 import torch
-
-from src.data_handler import _tokenize_data, _get_raw_data, _numericalize
-
+from pandas import DataFrame
 from sklearn.metrics import (
     ConfusionMatrixDisplay,
     classification_report,
     confusion_matrix,
 )
+from src.data_handler import _get_raw_data, _numericalize, _tokenize_data
 
-LABELS = {0: "World", 1: "Sports", 2: "Business", 3:"Sci/Tech"}
+LABELS = {0: "World", 1: "Sports", 2: "Business", 3: "Sci/Tech"}
 
-def compare(results):
+
+def compare(results: list[dict[str, Any]]) -> None:
+    """
+    Function builds a table which contains the validation accuracy, validation
+    macro F1 score, and the total training time for each result. It then
+    sorts the table by macro F1 and accuracy.
+
+    Args:
+        results: List of dictionaries which contains the evaluation results of the models
+
+    Returns:
+        None
+    """
     rows = []
     for res in results:
         rows.append(
@@ -42,7 +54,15 @@ def compare(results):
     print(df_compare)
 
 
-def plot_learning_curves(results):
+def plot_learning_curves(results: list[dict[str, Any]]) -> None:
+    """
+    Plots the learning curves for macro F1 and validation loss.
+
+    Args:
+        results: List of dictionaries which contains the model's training history
+    Returns:
+        None
+    """
     # plot f1
     for res in results:
         hist = res["hist"]
@@ -68,7 +88,9 @@ def plot_learning_curves(results):
     plt.close()
 
 
-def plot_confucion_matrix(model, loader, model_name: str, dataset: str) -> None:
+def plot_confusion_matrix(
+    model: Any, loader: Any, model_name: str, dataset: str
+) -> None:
     """
     Function evaluates the classification and saves its confusion matrix.
 
@@ -94,9 +116,21 @@ def plot_confucion_matrix(model, loader, model_name: str, dataset: str) -> None:
     plt.close()
 
 
-def do_final_evaluation(model, loader, model_name: str, dataset: str):
+def do_final_evaluation(model: Any, loader: Any, model_name: str, dataset: str) -> None:
+    """
+    Performs the final evaluation of the model and prints the results
+
+    Args:
+        model: the model which will be evaluated
+        loader: DataLoader containing the dataset to evaluate on
+        model_name: name of the model
+        dataset: dataset identifier
+
+    Returns:
+        None
+    """
     # plot confusion matrix
-    plot_confucion_matrix(model, loader, model_name, dataset)
+    plot_confusion_matrix(model, loader, model_name, dataset)
     # print results table
     results = model.evaluate(loader)
     rows = []
@@ -117,10 +151,29 @@ def do_final_evaluation(model, loader, model_name: str, dataset: str):
             ],
         )
     )
-    
 
-def get_misclassified_examples(model, model_name, path, vocab, max_items: int = 8):
-    raw_split = _get_raw_data(path)['test']
+
+def get_misclassified_examples(
+    model: Any,
+    model_name: str,
+    path: str,
+    vocab: dict[str, int],
+    max_items: int = 8,
+) -> None:
+    """
+    Collects misclassified examples from the test set
+
+    Args:
+        model: model used for the prediction
+        model_name: name of the model
+        path: path to the dataset files
+        vocab: vocabulary which maps tokens to indices
+        max_items: maximum number of misclassified examples
+
+    Returns:
+        None
+    """
+    raw_split = _get_raw_data(path)["test"]
     model.eval()
     errs = []
     for ex in raw_split:
@@ -138,13 +191,21 @@ def get_misclassified_examples(model, model_name, path, vocab, max_items: int = 
             errs.append((y, pred, snippet))
         if len(errs) >= max_items:
             break
-    
+
     show_errors(model_name, errs)
 
-def show_errors(name: str, errs):
+
+def show_errors(name: str, errs: list) -> None:
+    """
+    Prints the misclassified examples
+
+    Args:
+        name: name of the model
+        errs: list containing the true label, predicted label, and a part of the text
+    """
     print(name)
-    for i,(y,p,snip) in enumerate(errs):
+    for i, (y, p, snip) in enumerate(errs):
         print()
-        print(f"error {i+1}")
-        print("true:", LABELS[y-1], "pred:", LABELS[p-1])
+        print(f"error {i + 1}")
+        print("true:", LABELS[y - 1], "pred:", LABELS[p - 1])
         print("text:", snip)

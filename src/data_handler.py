@@ -1,15 +1,15 @@
 from collections import Counter
 from dataclasses import dataclass
-from typing import Any
 from pathlib import Path
+from typing import Any, Dict, Tuple
 
 import matplotlib.pyplot as plt
 import pandas as pd
 import tensorflow_text as tf_text
 import torch
+from datasets import Dataset as ds
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, Dataset
-from datasets import Dataset as ds
 
 PAD = "<pad>"
 UNK = "<unk>"
@@ -22,7 +22,20 @@ N_VAL = 100
 N_TEST = 100
 
 
-def _get_raw_data(path):
+def _get_raw_data(path: str) -> Dict[str, ds]:
+    """
+    Load the raw dataset from CSV files, split the training data into
+    training and validation sets, and convert them to HuggingFace datasets.
+
+    Args:
+        path: path to the directory containing the dataset CSV files
+
+    Returns:
+        Dictionary containing three datasets:
+            - train: training dataset
+            - validation: validation dataset
+            - test: test dataset
+    """
     train_data = pd.read_csv(path + "/train.csv")
     test_data = pd.read_csv(path + "/test.csv")
 
@@ -56,21 +69,58 @@ def _get_raw_data(path):
     }
 
 
-def _get_smaller_datasets(raw):
+def _get_smaller_datasets(
+    raw: Dict[str, ds],
+) -> Tuple[ds, ds, ds]:
+    """
+    Create smaller subsets of the datasets for faster experimentation.
+
+    Args:
+        raw: Dictionary containing the original datasets ("train",
+        "validation", and "test").
+
+    Returns:
+        A tuple containing:
+            - training dataset
+            - validation dataset
+            - test dataset
+    """
     train = raw["train"].shuffle(seed=67).select(range(N_TRAIN))
     validation = raw["validation"].shuffle(seed=67).select(range(N_VAL))
     test = raw["test"].select(range(N_TEST))
     return train, validation, test
 
 
-def _get_datasets(raw):
+def _get_datasets(raw: Dict[str, ds]) -> Tuple[ds, ds, ds]:
+    """
+    Retrieve the datasets used for training, validation, and testing.
+
+    Args:
+        raw: Dictionary containing the datasets ("train",
+        "validation", and "test".)
+
+    Returns:
+        A tuple containing:
+            - training dataset
+            - validation dataset
+            - test dataset
+    """
     train = raw["train"].shuffle(seed=67)  # We only shuffle the training set
     validation = raw["validation"]
     test = raw["test"]
     return train, validation, test
 
 
-def _tokenize_data(data):
+def _tokenize_data(data: str) -> list[str]:
+    """
+    Function which tokenizes the text input.
+
+    Args:
+        data: input string
+
+    Returns:
+        List of tokens extracted from the input
+    """
     tokenizer = tf_text.UnicodeScriptTokenizer()
     tokens = tokenizer.tokenize([data])
     return tokens.to_list()[0]
@@ -81,6 +131,14 @@ def _build_vocab(texts, min_freq: int = 2, max_size: int = 30000) -> dict:
     Build a vocabulary mapping from tokens to integer indices.
     The vocabulary will include only tokens that appear at least `min_freq` times,
     and will be limited to `max_size` tokens (including PAD and UNK).
+
+    Args:
+        texts: input texts used to create the vocabulary
+        min_freq: minimum number of appearances needed for adding to the vocabulary
+        max_size: maximum size of the vocabulary
+
+    Returns:
+        vocab: dictionary which maps the tokens to integer indices
     """
     counter = Counter()
     for text in texts:
@@ -100,18 +158,33 @@ def _numericalize(tokens: list, vocab: dict) -> list:
     """
     Convert a list of tokens into a list of integer indices using the provided vocabulary.
     Tokens not found in the vocabulary will be mapped to the index of UNK.
+
+    Args:
+        tokens: list of tokenized words
+        vocab: dictionary which maps the tokens to integer indices
+
+    Returns:
+        A list of integer token indices
     """
     return [vocab.get(tok, vocab[UNK]) for tok in tokens]
 
 
 @dataclass
 class Batch:
+    """
+    Class which represents the data used for model training.
+    """
+
     x: torch.Tensor  # (B, T) token ids
     lengths: torch.Tensor  # (B,) true lengths
     y: torch.Tensor  # (B,) labels
 
 
 class TextDataset(Dataset):
+    """
+    Dataset used for text classification.
+    """
+
     def __init__(
         self,
         hf_ds: dict,
@@ -121,17 +194,27 @@ class TextDataset(Dataset):
         nums=None,
         labs=None,
     ) -> None:
+
         self.vocab = vocab
         self.max_len = max_len
         self.labels = []
         self.numericalized = []
         if from_file:
-            self.numericalized = nums
-            self.labels = labs
+            self.numericalized = nums if nums is not None else []
+            self.labels = labs if labs is not None else []
         else:
             self._numericalize_all(hf_ds)
 
-    def _numericalize_all(self, hf_ds):
+    def _numericalize_all(self, hf_ds: dict):
+        """
+        Converts the text from the dataset into token id sequences.
+
+        Args:
+            hf_ds: HuggingFace dataset which contains the text samples
+
+        Returns:
+            None
+        """
         for item in hf_ds:
             tokens = _tokenize_data(item["text"])
             # Convert to ids and truncate
@@ -144,17 +227,36 @@ class TextDataset(Dataset):
             self.numericalized.append(ids)
             self.labels.append(int(item["label"]) - 1)
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Return the number of samples in the dataset."""
         return len(self.labels)
 
     def __getitem__(self, idx: int) -> tuple:
-        """Given an index, return the token ids and label for the corresponding sample."""
+        """
+        Given an index, return the token ids and label for the corresponding sample.
+
+        Args:
+            idx: index of the sample
+
+        Returns:
+            Tuple which contains the token id sequence and the label
+        """
         return self.numericalized[idx][: self.max_len], self.labels[idx]
 
 
 def collate(batch: list) -> Batch:
-    """Collate function to convert a list of samples into a batch."""
+    """
+    Collate function to convert a list of samples into a batch.
+
+    Args:
+        batch: list of samples where each sample is a tuple
+
+    Returns:
+        A Batch object containing:
+            - x: tensor of token ids
+            - lengths: tensor of lengths
+            - y: tensor of labels
+    """
     # batch: list of (ids_list, label)
     lengths = torch.tensor([len(x) for x, _ in batch], dtype=torch.long)
     max_len = int(lengths.max().item()) if len(batch) > 0 else 0
@@ -165,7 +267,16 @@ def collate(batch: list) -> Batch:
     return Batch(x=x, lengths=lengths, y=y)
 
 
-def _plot_lengths(data):
+def _plot_lengths(data) -> None:
+    """
+    Function which creates the histogram for the distribution of length of the texts.
+
+    Args:
+        data: dataset containing the input strings
+
+    Returns:
+        None
+    """
     Path("plots").mkdir(exist_ok=True)
 
     lengths = [len(_tokenize_data(text)) for text in data["text"]]
@@ -183,6 +294,7 @@ def get_preprocessed_data(
     Any,  # X_train
     Any,  # X_validation
     Any,  # X_test
+    Any,  # vocab
 ]:
     """
     Function combines the Title an Description columns into one variable, and
@@ -245,7 +357,19 @@ def get_preprocessed_data(
     )
 
 
-def get_from_fast_file():
+def get_from_fast_file() -> Tuple[DataLoader, DataLoader, DataLoader, Dict[str, int]]:
+    """
+    The function reads a file containing the vocabulary and the numericalized
+    datasets (train, validation, and test). It reconstructs the datasets,
+    creates DataLoader objects, and returns them together with the vocabulary.
+
+    Returns:
+        A tuple containing:
+            - train_loader: DataLoader for the training dataset
+            - val_loader: DataLoader for the validation dataset
+            - test_loader: DataLoader for the test dataset
+            - vocab: Dictionary mapping tokens to indices
+    """
     train_data = []
     train_labels = []
     val_data = []

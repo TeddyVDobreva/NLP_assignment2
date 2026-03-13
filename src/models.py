@@ -4,13 +4,29 @@ import numpy as np
 import torch
 import torch.nn as nn
 from sklearn.metrics import accuracy_score, f1_score
+from typing import Any
 
 MAX_EPOCHS = 50
 PATIENCE = 3
 LR = 0.001
 
 
-def _evaluation_loop(model, loader) -> dict:
+def _evaluation_loop(model: nn.Module, loader: Any) -> dict:
+    """
+    Evaluate the model on a dataset and compute loss and classification metrics.
+
+    Args:
+        model: model to evaluate
+        loader: DataLoader containing the evaluation data
+
+    Returns:
+        A dictionary containing:
+            - loss: average loss over the dataset
+            - acc: accuracy score
+            - f1: macro F1 score
+            - y_true: true labels
+            - y_pred: predicted labels
+    """
     model.eval()
     all_y = []
     all_pred = []
@@ -45,8 +61,8 @@ def _evaluation_loop(model, loader) -> dict:
 
 def _training_loop(
     model: nn.Module,
-    train_loader,
-    val_loader,
+    train_loader: Any,
+    val_loader: Any,
     lr: float = LR,
     max_epochs: int = MAX_EPOCHS,
     weight_decay: float = 0.0,
@@ -57,6 +73,18 @@ def _training_loop(
 
     If clip_grad_norm is not None, gradients are clipped by global norm after backward.
     We log the pre clipping total gradient norm each epoch.
+
+    Args:
+        model: model to train
+        train_loader: dataloader containing the training data
+        val_loader: dataloader containing the validation data
+        lr: learning rate for the optimizer
+        max_epochs: maximum number of training epochs
+        weight_decay: weight decay used by the optimizer
+        patience: number of epochs to wait before early stopping
+
+    Returns:
+        List containing the training history for each epoch
     """
     loss_fn = nn.CrossEntropyLoss()
     optim = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
@@ -157,6 +185,12 @@ def _training_loop(
 
 
 class LSTMClassifier(nn.Module):
+    """
+    LSTM text classification model
+
+    The layers of the architecture are: embedding, dropout, LSTM, average pooling,
+    dropout, linear, and softmax layer.
+    """
     def __init__(
         self,
         vocab_size: int,
@@ -186,6 +220,16 @@ class LSTMClassifier(nn.Module):
         self.fc = nn.Softmax(0)
 
     def forward(self, x: torch.Tensor, lengths: torch.Tensor) -> torch.Tensor:
+        """
+        Performs a forward pass through the model.
+
+        Args: 
+            x: tensor containing token ids with their shape
+            lengths: tensor containing the true lengths
+        
+        Returns: 
+            Tensor containing the class probabilities
+        """
         emb = self.emb_dropout(self.embedding(x))  # (B, T, E)
         packed = nn.utils.rnn.pack_padded_sequence(
             emb, lengths.cpu(), batch_first=True, enforce_sorted=False
@@ -197,24 +241,53 @@ class LSTMClassifier(nn.Module):
         res = self.res(rep)
         return self.fc(res)
 
-    def evaluate(self, loader):
+    def evaluate(self, loader: Any) -> dict[str, Any]:
+        """
+        Evaluates the model on a dataset.
+
+        Args: 
+            loader: dataloader containing the evaluation data
+
+        Returns: 
+            Dictionary containing the evaluation metrics
+        """
         return _evaluation_loop(self, loader)
 
     def fit(
         self,
-        train_loader,
-        val_loader,
+        train_loader: Any,
+        val_loader: Any,
         lr: float = LR,
         max_epochs: int = MAX_EPOCHS,
         weight_decay: float = 0.0,
         patience: int | None = PATIENCE,
-    ):
+    ) -> list[dict[str, Any]]:
+        """
+        Function that trains the model.
+
+        Args:
+            train_loader: dataloader containing the training data
+            val_loader: dataloader containing the validation data
+            lr: learning rate
+            max_epochs: maximum number of epochs
+            weight_decay: weight decay
+            patience: early stopping patience
+
+        Returns:
+            Training history for each epoch
+        """
         return _training_loop(
             self, train_loader, val_loader, lr, max_epochs, weight_decay, patience
         )
 
 
 class CNNTextClassifier(nn.Module):
+    """
+    CNN classification model.
+
+    The layers of the architecture are: embedding, dropout, convolution layers,
+    pooling, dropout, linear, and softmax layer.
+    """
     def __init__(
         self,
         vocab_size: int,
@@ -242,6 +315,16 @@ class CNNTextClassifier(nn.Module):
         self.fc = nn.Softmax(0)
 
     def forward(self, x: torch.Tensor, lengths: torch.Tensor) -> torch.Tensor:
+        """
+        Performs a forward pass through the model.
+
+        Args:
+            x: tensor containing token ids with their shape
+            lengths: tensor containing the true lengths
+
+        Returns:
+            Tensor containing the class probabilities
+        """
         # x: (B, T)
         emb = self.emb_dropout(self.embedding(x))  # (B, T, E)
         emb_t = emb.transpose(1, 2)  # (B, E, T) for Conv1d
@@ -256,7 +339,16 @@ class CNNTextClassifier(nn.Module):
         res = self.res(rep)
         return self.fc(res)
 
-    def evaluate(self, loader):
+    def evaluate(self, loader: Any) -> dict[str, Any]:
+        """
+        Evaluates the model on a dataset.
+
+        Args: 
+            loader: dataloader containing the evaluation data
+
+        Returns: 
+            Dictionary containing the evaluation metrics
+        """
         return _evaluation_loop(self, loader)
 
     def fit(
@@ -267,7 +359,21 @@ class CNNTextClassifier(nn.Module):
         max_epochs: int = MAX_EPOCHS,
         weight_decay: float = 0.0,
         patience: int | None = PATIENCE,
-    ):
+    ) -> list[dict[str, Any]]:
+        """
+        Function that trains the model.
+
+        Args:
+            train_loader: dataloader containing the training data
+            val_loader: dataloader containing the validation data
+            lr: learning rate
+            max_epochs: maximum number of epochs
+            weight_decay: weight decay
+            patience: early stopping patience
+
+        Returns:
+            Training history for each epoch
+        """
         return _training_loop(
             self, train_loader, val_loader, lr, max_epochs, weight_decay, patience
         )
