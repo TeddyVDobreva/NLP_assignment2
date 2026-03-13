@@ -1,4 +1,6 @@
 The repository has the following structure:
+
+```
 .
 ├── data
 │   ├── fast.txt
@@ -32,6 +34,7 @@ The repository has the following structure:
 │   ├── hyperparameter_evaluation.py
 │   └── models.py
 └── uv.lock
+```
 
 You can run the code by following the instructions enclosed here.
 
